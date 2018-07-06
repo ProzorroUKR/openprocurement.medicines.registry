@@ -13,6 +13,7 @@ requires = [
     'restkit',
     'retrying',
     'pytz',
+    'redis',
     'pyramid',
     'pytz',
     'simplejson',
@@ -29,7 +30,7 @@ test_requires = requires + [
     'bottle'
 ]
 
-bot_requires = requires + [
+bridge_requires = requires + [
     'PyYAML',
     'gevent',
     'requests',
@@ -37,6 +38,7 @@ bot_requires = requires + [
     'retrying',
     'iso8601',
     'pytz',
+    'redis',
     'openprocurement.medicines.registry'
 ]
 
@@ -75,7 +77,7 @@ setup(
     zip_safe=False,
     install_requires=requires,
     extras_require={
-        'bot': bot_requires,
+        'bot': bridge_requires,
         'test': test_requires,
         'docs': docs_requires,
     },
