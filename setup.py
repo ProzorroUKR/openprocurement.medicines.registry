@@ -8,18 +8,16 @@ requires = [
     'chaussette',
     'gevent',
     'mock',
-    'pyramid_exclog',
-    'requests',
+    # 'pyramid_exclog',
+    # 'requests',
     'restkit',
     'retrying',
     'pytz',
     'redis',
     'pyramid',
     'pytz',
-    'simplejson',
     'request_id_middleware',
-    'server_cookie_middleware',
-    'hypothesis'
+    'server_cookie_middleware'
 ]
 
 test_requires = requires + [
@@ -39,7 +37,13 @@ bridge_requires = requires + [
     'iso8601',
     'pytz',
     'redis',
-    'openprocurement.medicines.registry'
+    # 'openprocurement.medicines.registry.api',
+    # 'openprocurement.medicines.registry.databridge',
+]
+
+api_requires = requires + [
+    'pyramid_exclog',
+    'requests'
 ]
 
 docs_requires = requires + [
@@ -48,10 +52,13 @@ docs_requires = requires + [
 
 entry_points = {
     'paste.app_factory': [
-        'main = openprocurement.medicines.registry:main'
+        # 'main = openprocurement.medicines.registry:main'
+        'main = openprocurement.medicines.registry.api:main'
     ],
     'console_scripts': [
-        'medicines_registry = openprocurement.medicines.registry:main',
+        'medicines_registry = openprocurement.medicines.registry.databridge:main',
+        'medicines_registry_api = openprocurement.medicines.registry.api:main',
+        'main = openprocurement.medicines.registry.api:main'
     ]
 }
 
@@ -77,6 +84,7 @@ setup(
     zip_safe=False,
     install_requires=requires,
     extras_require={
+        'api': api_requires,
         'bot': bridge_requires,
         'test': test_requires,
         'docs': docs_requires,

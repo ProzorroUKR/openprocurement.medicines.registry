@@ -1,0 +1,143 @@
+import os
+import ntpath
+import glob
+import ast
+from pytz import timezone
+from datetime import datetime
+from functools import partial
+
+from xml.etree import ElementTree
+
+
+TZ = timezone(os.environ['TZ'] if 'TZ' in os.environ else 'Europe/Kiev')
+
+
+def get_now():
+    return datetime.now(TZ).replace(microsecond=0)
+
+
+def get_file_name(file_path):
+    return ntpath.basename(file_path)
+
+
+def delete_file(file_path):
+    os.remove(file_path)
+
+
+def get_directory_files(directory, prefix):
+    return glob.glob(os.path.join(directory, prefix))
+
+
+def decode_cp1251(s):
+    return s.decode('cp1251')
+
+
+def file_exists(file_path):
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        return True
+    else:
+        return False
+
+
+def file_is_empty(file_path):
+    if os.stat(file_path).st_size > 0:
+        return False
+    else:
+        return True
+
+
+def create_file(file_path):
+    with open(file_path, 'w'):
+        pass
+
+
+def str_to_obj(string):
+    return ast.literal_eval(string)
+
+
+def strings_to_dict(strings):
+    _tmp = dict()
+
+    for string in strings:
+        for k, v in str_to_obj(string).items():
+            _tmp[k] = v
+
+    return _tmp
+
+
+def get_file_last_modified(filepath):
+    if os.path.exists(filepath) and os.path.isfile(filepath):
+        return datetime.fromtimestamp(os.path.getmtime(filepath)).replace(microsecond=0)
+
+
+def string_time_to_datetime(time='hh:mm:ss'):
+    dt_str = '{} {}'.format(get_now().date(), time)
+    return datetime.strptime(dt_str, '%Y-%m-%d %H:%M:%S')
+
+
+def journal_context(record=None, params=None):
+    if params is None:
+        params = {}
+
+    if record is None:
+        record = {}
+
+    for k, v in params.items():
+        record['JOURNAL_' + k] = v
+
+    return record
+
+
+class XMLParser:
+    def __init__(self, xml):
+        parser = ElementTree.XMLParser(encoding='utf-8')
+        self.xml = ElementTree.fromstring(xml, parser)
+
+        self.ROOT_ITEM = 'doc'
+
+    @staticmethod
+    def get_value(key, item):
+        try:
+            item = item.find(key).text
+
+            return item.lower().replace('*', '')
+        except AttributeError:
+            return None
+
+    def get_values(self, key, unique=True):
+        get_value = partial(self.get_value, key)
+        values = map(get_value, self.xml.findall(self.ROOT_ITEM))
+
+        if unique:
+            return set(values)
+        else:
+            return values
+
+    def inn2atc_atc2inn(self, root):
+        _tmp = dict()
+
+        for i in self.xml:
+            inn = i.find('mnn').text or ''
+            atc_list = [i.find('atc1').text, i.find('atc2').text, i.find('atc3').text]
+            atc = set([i.lower().decode('utf-8') for i in atc_list if i])
+
+            inn = inn.replace('*', '').lower().decode('utf-8')
+
+            if root == 'inn':
+                if inn in _tmp:
+                    value = _tmp.get(inn) | atc
+                    _tmp[inn] = value
+                else:
+                    _tmp[inn] = atc
+            elif root == 'atc':
+                for _atc in atc:
+                    if _atc in _tmp:
+                        _atc = _atc.lower()
+                        value = _tmp.get(_atc) | {inn}
+                        _tmp[_atc] = value
+                    else:
+                        _tmp[_atc] = {inn}
+            else:
+                return dict()
+        return {k: list(v) for k, v in _tmp.items()}
+
