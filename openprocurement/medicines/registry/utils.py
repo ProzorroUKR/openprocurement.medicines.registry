@@ -1,6 +1,4 @@
 import os
-import ntpath
-import glob
 import ast
 from pytz import timezone
 from datetime import datetime
@@ -14,18 +12,6 @@ TZ = timezone(os.environ['TZ'] if 'TZ' in os.environ else 'Europe/Kiev')
 
 def get_now():
     return datetime.now(TZ).replace(microsecond=0)
-
-
-def get_file_name(file_path):
-    return ntpath.basename(file_path)
-
-
-def delete_file(file_path):
-    os.remove(file_path)
-
-
-def get_directory_files(directory, prefix):
-    return glob.glob(os.path.join(directory, prefix))
 
 
 def decode_cp1251(s):
@@ -53,16 +39,6 @@ def create_file(file_path):
 
 def str_to_obj(string):
     return ast.literal_eval(string)
-
-
-def strings_to_dict(strings):
-    _tmp = dict()
-
-    for string in strings:
-        for k, v in str_to_obj(string).items():
-            _tmp[k] = v
-
-    return _tmp
 
 
 def get_file_last_modified(filepath):

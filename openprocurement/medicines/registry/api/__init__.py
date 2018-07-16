@@ -56,7 +56,6 @@ def main(*args, **settings):
 
     config.add_route('health', '/health')
     config.add_route('registry', '/registry/{param}.json')
-    config.add_route('registry_file', '/registry/{param}.json/file')
     config.scan('openprocurement.medicines.registry.api.views')
     return config.make_wsgi_app()
 

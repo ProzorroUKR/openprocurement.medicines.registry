@@ -9,8 +9,7 @@ from gevent import monkey
 from openprocurement.medicines.registry.utils import (
     journal_context, get_now, get_file_last_modified,
     string_time_to_datetime, decode_cp1251, file_exists,
-    create_file, file_is_empty, XMLParser, get_file_name, delete_file,
-    get_directory_files
+    create_file, file_is_empty, XMLParser
 )
 from openprocurement.medicines.registry.journal_msg_ids import (
     BRIDGE_START, BRIDGE_INFO, BRIDGE_REGISTER, BRIDGE_FILE, BRIDGE_PARSER_ERROR, BRIDGE_CACHE, BRIDGE_RESTART_SYNC,
@@ -271,14 +270,8 @@ class MedicinesRegistryBridge(object):
             if not file_is_empty(file_path):
                 data = json.loads(f.read())
 
-                self.db.remove_pattern('{}:*'.format(name))
-
-                if name in ['inn2atc', 'atc2inn']:
-                    for k, v in data.items():
-                        self.db.put('{}:{}'.format(name, self.db.key_creation(k)), {k: v})
-                else:
-                    for i in data:
-                        self.db.put('{}:{}'.format(name, self.db.key_creation(i)), i)
+                self.db.remove(name)
+                self.db.put(name, data)
 
                 logger.info(
                     'Cache updated for {}.'.format(name),
@@ -295,27 +288,8 @@ class MedicinesRegistryBridge(object):
             gevent.sleep(self.cache_monitoring_delay)
 
             for _, name in self.eq_valid_names.items():
-                if not len(self.db.keys('{}:*'.format(name))) > 0:
+                if not len(self.db.keys(name)) > 0:
                     self.__update_cache(name)
-
-    def __delete_file(self, prefix):
-        file_path = os.path.join(self.DATA_PATH, '{}.json'.format(prefix))
-        last_modified_file = get_file_last_modified(file_path)
-
-        for file_path in get_directory_files(self.DATA_PATH, prefix='{}-*'.format(prefix)):
-            if get_file_name(file_path) != '{}-{}.json'.format(prefix, last_modified_file.date()):
-                logger.info(
-                    'Delete old file {}'.format(get_file_name(file_path)),
-                    extra=journal_context({'MESSAGE_ID': BRIDGE_INFO}, {})
-                )
-                delete_file(file_path)
-
-    def files_deleting(self):
-        while self.INFINITY_LOOP:
-            gevent.sleep(self.file_cleaner_delay)
-
-            for prefix in ['inn', 'atc', 'inn2atc', 'atc2inn']:
-                self.__delete_file(prefix)
 
     def __start_sync_workers(self):
         self.jobs = (
@@ -325,9 +299,6 @@ class MedicinesRegistryBridge(object):
 
     def __start_cache_monitoring_worker(self):
         self.cache_monitoring_worker = gevent.spawn(self.cache_monitoring)
-
-    def __start_file_cleaner_worker(self):
-        self.file_cleaner_worker = gevent.spawn(self.files_deleting)
 
     def __restart_sync_workers(self):
         logger.warn(
@@ -358,19 +329,6 @@ class MedicinesRegistryBridge(object):
             extra=journal_context({'MESSAGE_ID': BRIDGE_INFO}, {})
         )
 
-    def __restart_file_cleaner_worker(self):
-        logger.warn(
-            'Restart file cleaner worker...',
-            extra=journal_context({'MESSAGE_ID': BRIDGE_INFO}, {})
-        )
-        self.file_cleaner_worker.kill()
-        self.__start_file_cleaner_worker()
-
-        logger.info(
-            'Restart file cleaner worker completed.',
-            extra=journal_context({'MESSAGE_ID': BRIDGE_INFO}, {})
-        )
-
     def run(self):
         logger.info(
             'Start medicines registry bridge...',
@@ -379,7 +337,6 @@ class MedicinesRegistryBridge(object):
 
         self.__start_sync_workers()
         self.__start_cache_monitoring_worker()
-        self.__start_file_cleaner_worker()
 
         registry_updater, json_files_updater = self.jobs
         cache_monitoring_worker = self.cache_monitoring_worker

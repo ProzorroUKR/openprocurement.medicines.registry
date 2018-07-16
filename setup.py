@@ -7,9 +7,6 @@ requires = [
     'PyYAML',
     'chaussette',
     'gevent',
-    'mock',
-    # 'pyramid_exclog',
-    # 'requests',
     'restkit',
     'retrying',
     'pytz',
@@ -36,9 +33,7 @@ bridge_requires = requires + [
     'retrying',
     'iso8601',
     'pytz',
-    'redis',
-    # 'openprocurement.medicines.registry.api',
-    # 'openprocurement.medicines.registry.databridge',
+    'redis'
 ]
 
 api_requires = requires + [
@@ -52,7 +47,6 @@ docs_requires = requires + [
 
 entry_points = {
     'paste.app_factory': [
-        # 'main = openprocurement.medicines.registry:main'
         'main = openprocurement.medicines.registry.api:main'
     ],
     'console_scripts': [

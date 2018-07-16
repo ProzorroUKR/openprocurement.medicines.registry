@@ -50,17 +50,6 @@ class DB(object):
         for key in self.db.scan_iter(prefix):
             self.remove(key)
 
-    @staticmethod
-    def key_creation(string):
-        replace_elements = [(',', '_'), (' ', '_'), ('__', '_'), ('.', ''), ('(', ''), (')', ''), ('-', '_')]
-
-        if string:
-            for re in replace_elements:
-                find, replace = re
-                string = string.replace(find, replace)
-
-        return string
-
     @property
     def backend(self):
         return self.__backend
