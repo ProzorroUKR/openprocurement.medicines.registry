@@ -7,6 +7,7 @@ from functools import partial
 from xml.etree import ElementTree
 
 
+SANDBOX_MODE = True if os.environ.get('SANDBOX_MODE', 'False').lower() == 'true' else False
 TZ = timezone(os.environ['TZ'] if 'TZ' in os.environ else 'Europe/Kiev')
 
 
@@ -76,7 +77,7 @@ class XMLParser:
         try:
             item = item.find(key).text
 
-            return item.lower().replace('*', '')
+            return item.replace('*', '')
         except AttributeError:
             return None
 
@@ -95,9 +96,9 @@ class XMLParser:
         for i in self.xml:
             inn = i.find('mnn').text or ''
             atc_list = [i.find('atc1').text, i.find('atc2').text, i.find('atc3').text]
-            atc = set([i.lower().decode('utf-8') for i in atc_list if i])
+            atc = set([i.decode('utf-8') for i in atc_list if i])
 
-            inn = inn.replace('*', '').lower().decode('utf-8')
+            inn = inn.replace('*', '').decode('utf-8')
 
             if root == 'inn':
                 if inn in _tmp:
@@ -108,7 +109,7 @@ class XMLParser:
             elif root == 'atc':
                 for _atc in atc:
                     if _atc in _tmp:
-                        _atc = _atc.lower()
+                        _atc = _atc
                         value = _tmp.get(_atc) | {inn}
                         _tmp[_atc] = value
                     else:

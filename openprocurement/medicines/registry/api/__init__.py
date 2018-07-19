@@ -13,10 +13,11 @@ from openprocurement.medicines.registry.api.utils import (
     add_logging_context,
     set_logging_context,
     set_renderer,
-    authenticated_role,
     forbidden,
-    request_params
+    request_params,
+    read_users
 )
+from openprocurement.medicines.registry.auth import authenticated_role
 
 gevent.monkey.patch_all()
 
@@ -33,7 +34,7 @@ def main(*args, **settings):
     from pyramid.renderers import JSON, JSONP
 
     logger.info('Start registry api...')
-
+    read_users(settings['auth.file'])
     config = Configurator(
         autocommit=True,
         settings=settings,
@@ -53,7 +54,6 @@ def main(*args, **settings):
     config.add_subscriber(add_logging_context, NewRequest)
     config.add_subscriber(set_logging_context, ContextFound)
     config.add_subscriber(set_renderer, NewRequest)
-
     config.add_route('health', '/health')
     config.add_route('registry', '/registry/{param}.json')
     config.scan('openprocurement.medicines.registry.api.views')

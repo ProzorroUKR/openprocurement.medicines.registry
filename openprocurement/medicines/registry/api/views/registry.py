@@ -26,7 +26,7 @@ class RegistryView(object):
 
         self.valid_params = ['inn', 'atc', 'inn2atc', 'atc2inn']
 
-    @view_config(request_method='GET', permission='view')
+    @view_config(request_method='GET', permission='registry')
     def get(self):
         param = self.request.matchdict.get('param')
 

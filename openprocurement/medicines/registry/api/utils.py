@@ -1,10 +1,12 @@
+# -*- coding: utf-8 -*-
 import logging.config
 
 from hashlib import sha512
 from json import dumps
-from pyramid.security import Allow, Everyone
+from pyramid.security import Allow
 from pyramid.httpexceptions import exception_response
 from webob.multidict import NestedMultiDict
+from ConfigParser import ConfigParser
 
 from openprocurement.medicines.registry import VERSION
 from openprocurement.medicines.registry.journal_msg_ids import API_ERROR_HANDLER
@@ -18,19 +20,15 @@ USERS = dict()
 class Root(object):
     __name__ = None
     __parent__ = None
-    __acl__ = [(Allow, Everyone, 'view')]
+    __acl__ = [
+        (Allow, 'g:platforms', 'registry')
+    ]
 
     def __init__(self, request):
         self.request = request
 
 
-def authenticated_role(request):
-    principals = request.effective_principals
-    groups = [g for g in reversed(principals) if g.startswith('g:')]
-    return groups[0][2:] if groups else 'anonymous'
-
-
-def auth_check(username, password):
+def auth_check(username, password, request):
     if username in USERS and USERS[username]['password'] == sha512(password).hexdigest():
         return ['g:{}'.format(USERS[username]['group'])]
 
@@ -160,3 +158,20 @@ def forbidden(request):
         request, 403, {'location': 'url', 'name': 'permission', 'description': 'Forbidden'}
     )
     return request.response
+
+
+def read_users(filename):
+    config = ConfigParser()
+    config.read(filename)
+
+    for i in config.sections():
+        USERS.update(dict([
+            (
+                j,
+                {
+                    'password': k,
+                    'group': i
+                }
+            )
+            for j, k in config.items(i)
+        ]))

@@ -25,7 +25,7 @@ class DB(object):
         if isinstance(self.config, ConfigParser):
             return self.config.get('app:api', name)
         else:
-            return self.config['app:api'][name]
+            return self.config.get(name)
 
     def get(self, key):
         return self.db.get(key)

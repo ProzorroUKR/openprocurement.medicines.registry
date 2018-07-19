@@ -37,8 +37,7 @@ bridge_requires = requires + [
 ]
 
 api_requires = requires + [
-    'pyramid_exclog',
-    'requests'
+    'pyramid_exclog'
 ]
 
 docs_requires = requires + [

@@ -1,27 +1,32 @@
 import os
 import logging.config
 import gevent
-import json
 
-from datetime import timedelta
-from urllib2 import urlopen
-from gevent import monkey
+from functools import partial
+from gevent import monkey, event
+from retrying import retry
+from requests import RequestException
 from openprocurement.medicines.registry.utils import (
-    journal_context, get_now, get_file_last_modified,
-    string_time_to_datetime, decode_cp1251, file_exists,
-    create_file, file_is_empty, XMLParser
+    journal_context,string_time_to_datetime, file_exists, create_file
 )
 from openprocurement.medicines.registry.journal_msg_ids import (
-    BRIDGE_START, BRIDGE_INFO, BRIDGE_REGISTER, BRIDGE_FILE, BRIDGE_PARSER_ERROR, BRIDGE_CACHE, BRIDGE_RESTART_SYNC,
-    BRIDGE_RESTART_CACHE_MONITORING
+    BRIDGE_START,
+    BRIDGE_INFO,
+    BRIDGE_PROXY_SERVER_CONN_ERROR,
+    BRIDGE_RESTART_WORKER
 )
 from openprocurement.medicines.registry.databridge.caching import DB
 from openprocurement.medicines.registry import BASE_DIR
+from openprocurement.medicines.registry.databridge.components import Registry, JsonFormer
+from openprocurement.medicines.registry.client import ProxyClient
+from openprocurement.medicines.registry.utils import SANDBOX_MODE
 
 
 monkey.patch_all()
 
 logger = logging.getLogger(__name__)
+
+RETRY_MULT = 1000
 
 
 class MedicinesRegistryBridge(object):
@@ -50,19 +55,35 @@ class MedicinesRegistryBridge(object):
 
         self.source_registry = self.config_get('source_registry')
 
-        self.inn_json_last_check = None
-        self.atc_json_last_check = None
-        self.inn2atc_json_last_check = None
-        self.atc2inn_json_last_check = None
-
-        self.eq_valid_names = {
-            'mnn': 'inn',
-            'atc1': 'atc',
-            'inn2atc': 'inn2atc',
-            'atc2inn': 'atc2inn'
-        }
-
         self._files_init()
+
+        self.proxy_client = ProxyClient(
+            host=self.config_get('proxy_host'),
+            port=self.config_get('proxy_port'),
+            version=self.config_get('proxy_version')
+        )
+
+        self.services_not_available = event.Event()
+        self.services_not_available.set()
+
+        self.registry = partial(
+            Registry.spawn,
+            source_registry=self.source_registry,
+            time_update_at=self.time_update_at,
+            delay=self.delay,
+            registry_delay=self.registry_delay,
+            services_not_available=self.services_not_available
+        )
+        self.json_former = partial(
+            JsonFormer.spawn,
+            db=self.db,
+            delay=self.delay,
+            json_files_delay=self.json_files_delay,
+            cache_monitoring_delay=self.cache_monitoring_delay,
+            services_not_available=self.services_not_available
+        )
+
+        self.sandbox_mode = os.environ.get('SANDBOX_MODE', 'False')
 
     def config_get(self, name):
         return self.config.get('app:api', name)
@@ -83,251 +104,47 @@ class MedicinesRegistryBridge(object):
             if not file_exists(f):
                 create_file(f)
 
-    def save_registry(self, xml):
-        logger.info(
-            'Save response to \'registry.xml\' file...',
-            extra=journal_context({'MESSAGE_ID': BRIDGE_REGISTER}, {})
-        )
+    def set_sleep(self):
+        self.services_not_available.clear()
 
-        with open(os.path.join(self.DATA_PATH, 'registry.xml'), 'w') as f:
-            f.write(xml)
-            logger.info(
-                'File \'registry.xml\' saved at: {}.'.format(get_now()),
-                extra=journal_context({'MESSAGE_ID': BRIDGE_REGISTER}, {})
-            )
+    def set_wake_up(self):
+        self.services_not_available.set()
 
-    def get_registry(self):
-        logger.info('Get remote registry...', extra=journal_context({'MESSAGE_ID': BRIDGE_INFO}, {}))
-        response = urlopen(self.source_registry)
-
-        if response.code != 200:
-            logger.info(
-                'Error! Server response status: {}. Sending a second request...'.format(response.code),
-                extra=journal_context({'MESSAGE_ID': BRIDGE_REGISTER}, {})
-            )
-            return
-        else:
-            logger.info(
-                'Server response status: {}'.format(response.code),
-                extra=journal_context({'MESSAGE_ID': BRIDGE_REGISTER}, {})
-            )
-
-        response = response.readlines()
-
+    @retry(stop_max_attempt_number=5, wait_exponential_multiplier=RETRY_MULT)
+    def check_proxy(self):
         try:
-            response = ''.join(map(decode_cp1251, response)).encode('utf-8').strip()
-        except UnicodeDecodeError as e:
-            logger.info(e)
-            return
-
-        self.save_registry(response)
-
-        return response
-
-    @property
-    def registry_update_time(self):
-        now = get_now()
-
-        if now.hour == self.time_update_at.hour:
-            check_to_time = self.time_update_at + timedelta(minutes=30)
-
-            if self.time_update_at.minute <= now.minute and now.replace(tzinfo=None).time() <= check_to_time.time():
-                return True
-            else:
-                return False
-        else:
-            return False
-
-    def update_local_registry(self):
-        while self.INFINITY_LOOP:
-            now = get_now()
-            last_modified = get_file_last_modified(self.registry_xml)
-
-            conditions = (
-                now.date() > last_modified.date() and self.registry_update_time, file_is_empty(self.registry_xml)
-            )
-
-            if any(conditions):
-                logger.info(
-                    'Update local registry file...',
-                    extra=journal_context({'MESSAGE_ID': BRIDGE_REGISTER}, {})
-                )
-                self.get_registry()
-            else:
-                logger.info(
-                    'Registry file is updated.',
-                    extra=journal_context({'MESSAGE_ID': BRIDGE_REGISTER}, {})
-                )
-            gevent.sleep(self.registry_delay)
-
-    def update_json(self, name):
-        logger.info(
-            'Update local {}.json file...'.format(self.eq_valid_names.get(name)),
-            extra=journal_context({'MESSAGE_ID': BRIDGE_INFO}, {})
-        )
-
-        file_path = os.path.join(self.DATA_PATH, '{}.json'.format(self.eq_valid_names.get(name)))
-
-        if file_is_empty(self.registry_xml):
-            logger.info('Local {}.json file not updated. Registry file is empty.'.format(
-                self.eq_valid_names.get(name)),
-                extra=journal_context({'MESSAGE_ID': BRIDGE_FILE}, {})
-            )
-            return
-
-        with open(self.registry_xml) as registry:
-            xml_parser = XMLParser(registry.read())
-
-        if name == 'mnn':
-            values = [v.decode('utf-8') for v in xml_parser.get_values(name) if v]
-            self.inn_json_last_check = get_now()
-        elif name == 'atc1':
-            values = list()
-
-            for atc in ['atc1', 'atc2', 'atc3']:
-                values.extend(xml_parser.get_values(atc))
-
-            values = [v.decode('utf-8') for v in set(values) if v]
-            self.atc_json_last_check = get_now()
-        elif name == 'inn2atc':
-            values = xml_parser.inn2atc_atc2inn(root='inn')
-            self.inn2atc_json_last_check = get_now()
-        elif name == 'atc2inn':
-            values = xml_parser.inn2atc_atc2inn(root='atc')
-            self.atc2inn_json_last_check = get_now()
-        else:
-            logger.warn(
-                'Error! Incorrect xml tag.',
-                extra=journal_context({'MESSAGE_ID': BRIDGE_PARSER_ERROR}, {})
-            )
-            return
-
-        name = self.eq_valid_names.get(name)
-
-        with open(file_path, 'r') as f:
-            if file_is_empty(file_path):
-                data = list()
-            else:
-                data = json.loads(f.read())
-
-        if set(values) == set(data):
-            if name in ['inn2atc', 'atc2inn']:
-                with open(file_path, 'w') as f:
-                    f.write(json.dumps(values))
-
-                logger.info(
-                    'DONE. Local {}.json file updated.'.format(name),
-                    extra=journal_context({'MESSAGE_ID': BRIDGE_FILE}, {})
-                )
-                self.__update_cache(name)
-            else:
-                logger.info(
-                    '{} values in remote registry not changed. Skipping update local {}.json file'.format(
-                        name, name
-                    ),
-                    extra=journal_context({'MESSAGE_ID': BRIDGE_FILE}, {})
-                )
-        else:
-            with open(file_path, 'w') as f:
-                f.write(json.dumps(values))
-
+            self.proxy_client.health(self.sandbox_mode)
+        except RequestException as e:
             logger.info(
-                'DONE. Local {}.json file updated.'.format(name),
-                extra=journal_context({'MESSAGE_ID': BRIDGE_FILE}, {})
+                'Proxy server connection error, message {} {}'.format(e, self.sandbox_mode),
+                extra=journal_context({"MESSAGE_ID": BRIDGE_PROXY_SERVER_CONN_ERROR}, {})
             )
-            self.__update_cache(name)
+            raise e
+        else:
+            return True
 
-    def update_json_files(self):
-        while self.INFINITY_LOOP:
-            now = get_now()
-            registry_last_modified = get_file_last_modified(self.registry_xml)
+    def all_available(self):
+        try:
+            self.check_proxy()
+        except Exception as e:
+            logger.info('Service is unavailable, message {}'.format(e.message))
+            return False
+        else:
+            return True
 
-            last_check_dict = {
-                'inn': self.inn_json_last_check, 'atc': self.atc_json_last_check,
-                'inn2atc': self.inn2atc_json_last_check, 'atc2inn': self.atc2inn_json_last_check
-            }
-            files_dict = {
-                'inn': self.inn_json, 'atc': self.atc_json,
-                'inn2atc': self.inn2atc_json, 'atc2inn': self.atc2inn_json
-            }
+    def check_services(self):
+        if self.all_available():
+            logger.info('All services are available')
+            self.set_wake_up()
+        else:
+            logger.info('Pausing bot')
+            self.set_sleep()
 
-            for name, eq_name in self.eq_valid_names.items():
-                if file_is_empty(files_dict.get(eq_name)):
-                    self.update_json(name)
-                else:
-                    if now.date() >= registry_last_modified.date():
-                        last_check = last_check_dict.get(eq_name)
-                        if not last_check or registry_last_modified.date() > last_check.date():
-                            self.update_json(name)
-
-            gevent.sleep(self.json_files_delay)
-
-    def __update_cache(self, name):
-        logger.info('Update cache for {}...'.format(name), extra=journal_context({'MESSAGE_ID': BRIDGE_INFO}, {}))
-        file_path = os.path.join(self.DATA_PATH, '{}.json'.format(name))
-
-        with open(file_path, 'r') as f:
-            if not file_is_empty(file_path):
-                data = json.loads(f.read())
-
-                self.db.remove(name)
-                self.db.put(name, data)
-
-                logger.info(
-                    'Cache updated for {}.'.format(name),
-                    extra=journal_context({'MESSAGE_ID': BRIDGE_CACHE}, {})
-                )
-            else:
-                logger.warn(
-                    'Cache not updated for {}. Registry file is empty.'.format(name),
-                    extra=journal_context({'MESSAGE_ID': BRIDGE_CACHE}, {})
-                )
-
-    def cache_monitoring(self):
-        while self.INFINITY_LOOP:
-            gevent.sleep(self.cache_monitoring_delay)
-
-            for _, name in self.eq_valid_names.items():
-                if not len(self.db.keys(name)) > 0:
-                    self.__update_cache(name)
-
-    def __start_sync_workers(self):
-        self.jobs = (
-            gevent.spawn(self.update_local_registry),
-            gevent.spawn(self.update_json_files)
-        )
-
-    def __start_cache_monitoring_worker(self):
-        self.cache_monitoring_worker = gevent.spawn(self.cache_monitoring)
-
-    def __restart_sync_workers(self):
-        logger.warn(
-            'Restarting sync workers...',
-            extra=journal_context({'MESSAGE_ID': BRIDGE_RESTART_SYNC}, {})
-        )
-
-        for j in self.jobs:
-            j.kill()
-
-        self.__start_sync_workers()
-        logger.info(
-            'Restart sync workers completed.',
-            extra=journal_context({'MESSAGE_ID': BRIDGE_INFO}, {})
-        )
-
-    def __restart_cache_monitoring_worker(self):
-        logger.warn(
-            'Restart cache monitoring worker...',
-            extra=journal_context({'MESSAGE_ID': BRIDGE_RESTART_CACHE_MONITORING}, {})
-        )
-
-        self.cache_monitoring_worker.kill()
-        self.__start_cache_monitoring_worker()
-
-        logger.info(
-            'Restart cache monitoring worker completed.',
-            extra=journal_context({'MESSAGE_ID': BRIDGE_INFO}, {})
-        )
+    def _start_jobs(self):
+        self.jobs = {
+            'registry': self.registry(),
+            'json_former': self.json_former()
+        }
 
     def run(self):
         logger.info(
@@ -335,26 +152,36 @@ class MedicinesRegistryBridge(object):
             extra=journal_context({'MESSAGE_ID': BRIDGE_START}, dict())
         )
 
-        self.__start_sync_workers()
-        self.__start_cache_monitoring_worker()
-
-        registry_updater, json_files_updater = self.jobs
-        cache_monitoring_worker = self.cache_monitoring_worker
+        self._start_jobs()
 
         while self.INFINITY_LOOP:
             gevent.sleep(self.delay)
 
-            if registry_updater.dead or json_files_updater.dead:
-                self.__restart_sync_workers()
-                registry_updater, json_files_updater = self.jobs
-
-            if cache_monitoring_worker.dead:
-                self.__restart_cache_monitoring_worker()
-                cache_monitoring_worker = self.cache_monitoring_worker
+            for name, job in self.jobs.items():
+                if job.dead:
+                    logger.warn('Restarting {} worker'.format(name))
+                    self.jobs[name] = gevent.spawn(getattr(self, name))
 
     def launch(self):
-        try:
-            self.run()
-        except KeyboardInterrupt:
-            logger.info('Exiting...')
+        while self.INFINITY_LOOP:
+            if self.all_available():
+                try:
+                    self.run()
+                    break
+                except KeyboardInterrupt:
+                    logger.info('Exiting...')
+
+            gevent.sleep(self.delay)
+
+    def check_and_revive_jobs(self):
+        for name, job in self.jobs.items():
+            if job.dead:
+                self.revive_job(name)
+
+    def revive_job(self, name):
+        logger.warning(
+            'Restarting {} worker'.format(name),
+            extra=journal_context({'MESSAGE_ID': BRIDGE_RESTART_WORKER})
+        )
+        self.jobs[name] = gevent.spawn(getattr(self, name))
 
