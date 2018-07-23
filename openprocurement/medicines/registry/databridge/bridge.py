@@ -19,7 +19,6 @@ from openprocurement.medicines.registry.databridge.caching import DB
 from openprocurement.medicines.registry import BASE_DIR
 from openprocurement.medicines.registry.databridge.components import Registry, JsonFormer
 from openprocurement.medicines.registry.client import ProxyClient
-from openprocurement.medicines.registry.utils import SANDBOX_MODE
 
 
 monkey.patch_all()
@@ -156,11 +155,14 @@ class MedicinesRegistryBridge(object):
 
         while self.INFINITY_LOOP:
             gevent.sleep(self.delay)
+            self.check_services()
 
             for name, job in self.jobs.items():
                 if job.dead:
                     logger.warn('Restarting {} worker'.format(name))
                     self.jobs[name] = gevent.spawn(getattr(self, name))
+
+            self.check_and_revive_jobs()
 
     def launch(self):
         while self.INFINITY_LOOP:
@@ -170,6 +172,7 @@ class MedicinesRegistryBridge(object):
                     break
                 except KeyboardInterrupt:
                     logger.info('Exiting...')
+                    gevent.killall(self.jobs, timeout=5)
 
             gevent.sleep(self.delay)
 

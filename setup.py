@@ -4,15 +4,12 @@ version = '1.0.0'
 
 requires = [
     'setuptools',
-    'PyYAML',
     'chaussette',
     'gevent',
-    'restkit',
     'retrying',
     'pytz',
     'redis',
     'pyramid',
-    'pytz',
     'request_id_middleware',
     'server_cookie_middleware'
 ]
@@ -21,19 +18,12 @@ test_requires = requires + [
     'webtest',
     'python-coveralls',
     'mock==1.0.1',
-    'requests_mock==1.3.0',
-    'bottle'
+    'requests_mock==1.3.0'
 ]
 
 bridge_requires = requires + [
-    'PyYAML',
-    'gevent',
     'requests',
-    'restkit',
-    'retrying',
-    'iso8601',
-    'pytz',
-    'redis'
+    'iso8601'
 ]
 
 api_requires = requires + [
