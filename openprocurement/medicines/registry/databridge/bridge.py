@@ -6,6 +6,7 @@ from functools import partial
 from gevent import monkey, event
 from retrying import retry
 from requests import RequestException
+from ConfigParser import ConfigParser
 from openprocurement.medicines.registry.utils import (
     journal_context,string_time_to_datetime, file_exists, create_file
 )
@@ -85,7 +86,10 @@ class MedicinesRegistryBridge(object):
         self.sandbox_mode = os.environ.get('SANDBOX_MODE', 'False')
 
     def config_get(self, name):
-        return self.config.get('app:api', name)
+        if isinstance(self.config, ConfigParser):
+            return self.config.get('app:api', name)
+        else:
+            return self.config.get(name)
 
     def _files_init(self):
         self.DATA_PATH = os.path.join(self.BASE_DIR, 'data')

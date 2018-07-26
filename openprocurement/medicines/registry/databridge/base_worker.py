@@ -17,6 +17,7 @@ class BaseWorker(Greenlet):
         self.services_not_available = services_not_available
         self.start_time = datetime.now()
         self.exit = False
+        self.delay = 60
 
     def _start_jobs(self):
         raise NotImplementedError()

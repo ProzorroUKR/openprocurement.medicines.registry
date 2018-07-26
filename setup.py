@@ -72,6 +72,5 @@ setup(
         'test': test_requires,
         'docs': docs_requires,
     },
-    test_suite="openprocurement.medicines.registry.tests.main.suite",
     entry_points=entry_points
 )
