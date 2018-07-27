@@ -44,7 +44,7 @@ def str_to_obj(string):
 
 def get_file_last_modified(filepath):
     if os.path.exists(filepath) and os.path.isfile(filepath):
-        return datetime.fromtimestamp(os.path.getmtime(filepath)).replace(microsecond=0)
+        return datetime.fromtimestamp(os.path.getmtime(filepath), TZ).replace(microsecond=0)
 
 
 def string_time_to_datetime(time='hh:mm:ss'):
