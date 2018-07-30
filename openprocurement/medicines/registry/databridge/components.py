@@ -180,8 +180,7 @@ class JsonFormer(BaseWorker):
             values = {v.decode('utf-8').lower(): v.decode('utf-8') for v in xml_parser.get_values(name) if v}
             self.inn_json_last_check = get_now()
         elif name == 'atc1':
-            values = xml_parser.inn2atc_atc2inn(root='atc')
-            values = {k: v[0] if v else '' for k, v in values.items()}
+            values = {v.decode('utf-8'): v.decode('utf-8') for v in xml_parser.get_values(name) if v}
             self.atc_json_last_check = get_now()
         elif name == 'inn2atc':
             values = xml_parser.inn2atc_atc2inn(root='inn')
