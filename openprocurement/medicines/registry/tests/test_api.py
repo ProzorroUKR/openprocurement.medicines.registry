@@ -13,29 +13,33 @@ class TestApi(BaseWebTest):
 
     def test_registry_valid_params(self):
         for param in valid_params:
-            response = self.app.get(reg_prefix+'{}.json'.format(param))
+            response = self.app.get('{}{}.json'.format(reg_prefix, param))
             self.assertEqual(response.status_code, 200)
 
     def test_registry_invalid_params(self):
         invalid_params = [' ', '123', 'qwe', 'V']
+        invalid_response = u'message': u'URL parameter "{}" not valid. URL parameter must be "inn.json", \
+                                                           "atc.json", "inn2atc.json" or "atc2inn.json"'
+
         for param in valid_params:
-            response = self.app.get(reg_prefix+'{}.json'.format(param))
+            response = self.app.get('{}{}.json'.format(reg_prefix, param))
             self.assertEqual(response.status_code, 400)
+            self.assertEqual(json.loads(response.text)['message'], invalid_response.format(param))
 
     def test_registry_unallowed_methods(self):
         for param in valid_params:
-            post_response = self.app.post(reg_prefix+'{}.json'.format(param))
+            post_response = self.app.post('{}{}.json'.format(reg_prefix, param))
             self.assertEqual(post_response.status_code, 404)
-            put_response = self.app.put(reg_prefix+'{}.json'.format(param))
+            put_response = self.app.put('{}{}.json'.format(reg_prefix, param))
             self.assertEqual(put_response.status_code, 404)
-            patch_response = self.app.patch(reg_prefix+'{}.json'.format(param))
+            patch_response = self.app.patch('{}{}.json'.format(reg_prefix, param))
             self.assertEqual(patch_response.status_code, 404)
-            delete_response = self.app.delete(reg_prefix+'{}.json'.format(param))
+            delete_response = self.app.delete('{}{}.json'.format(reg_prefix, param))
             self.assertEqual(delete_response.status_code, 404)
 
     def test_response_content_type(self):
-        for param in valid_params:
-            response = self.app.get(reg_prefix+'{}.json'.format(param))
+        for param in valid_params:m
+            response = self.app.get('{}{}.json'.format(reg_prefix, param))
             self.assertEqual(response.headers['Content-Type'], 'application/json')
 
     def test_registry_existing_of_test_val(self):
@@ -44,8 +48,9 @@ class TestApi(BaseWebTest):
                      'inn2atc': 'omoconazole',
                      'atc2inn': 'J05AF30'}
         for k, v in test_vals.items():
-            response = reg_prefix + '{}.json'.format(k)
+            response = '{}{}.json'.format(reg_prefix, k)
             self.assertNotEqual(None, json.loads(response.text).get(v))
+
     def test_registry_invalid_api_version(self):
         for param in valid_params:
             response = self.app.get('/api/2.0/registry/{}.json'.format(param))
@@ -53,9 +58,6 @@ class TestApi(BaseWebTest):
 
     def test_health_get(self):
         response = self.app.get('/api/1.0/health')
+        success_response =  {u'method': u'GET', u'success': True}
         self.assertEqual(response.status_code, 200)
-
-    def test_health_success_response(self):
-        expect_response = {'method': 'GET', 'success': True}
-        response = json.loads(self.app.get(health_addr).text)
-        self.app.assertEqual(response, expect_response)
+        self.assertEqual(json.loads(response.text), success_response)
