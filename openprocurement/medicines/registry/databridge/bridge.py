@@ -120,7 +120,7 @@ class MedicinesRegistryBridge(object):
         except RequestException as e:
             logger.info(
                 'Proxy server connection error, message {} {}'.format(e, self.sandbox_mode),
-                extra=journal_context({"MESSAGE_ID": BRIDGE_PROXY_SERVER_CONN_ERROR}, {})
+                extra=journal_context({'MESSAGE_ID': BRIDGE_PROXY_SERVER_CONN_ERROR}, {})
             )
             raise e
         else:

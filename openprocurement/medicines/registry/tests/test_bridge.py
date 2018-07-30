@@ -1,8 +1,10 @@
 from mock import patch, MagicMock
+from restkit import RequestError
 
 from openprocurement.medicines.registry.tests.base import BaseServersTest, config
 from openprocurement.medicines.registry.databridge.bridge import MedicinesRegistryBridge
 from openprocurement.medicines.registry.client import ProxyClient
+from openprocurement.medicines.registry.tests.utils import AlmostAlwaysTrue
 
 
 class TestBridgeWorker(BaseServersTest):
@@ -39,4 +41,45 @@ class TestBridgeWorker(BaseServersTest):
 
         self.worker.registry = registry
         self.worker.json_former = json_former
+
+        with patch('__builtin__.True', AlmostAlwaysTrue()):
+            self.worker.run()
+
+        self.assertEqual(self.worker.registry.call_count, 1)
+        self.assertEqual(self.worker.json_former.call_count, 1)
+
+    def test_proxy_server_mock(self):
+        self.worker = MedicinesRegistryBridge(config)
+        self.worker.proxy_client = MagicMock(health=MagicMock(side_effect=RequestError()))
+
+        with self.assertRaises(RequestError):
+            self.worker.check_proxy()
+
+        self.worker.proxy_client = MagicMock(return_value=True)
+        self.assertTrue(self.worker.check_proxy())
+
+    @patch('gevent.sleep')
+    def test_launch(self, gevent_sleep):
+        self.worker = MedicinesRegistryBridge(config)
+        self.worker.run = MagicMock()
+        self.worker.all_available = MagicMock(return_value=True)
+        self.worker.launch()
+        self.worker.run.assert_called_once()
+
+    def test_check_and_revive_jobs(self):
+        self.worker = MedicinesRegistryBridge(config)
+        self.worker.jobs = {'test': MagicMock(dead=MagicMock(return_value=True))}
+        self.worker.revive_job = MagicMock()
+        self.worker.check_and_revive_jobs()
+        self.worker.revive_job.assert_called_once_with('test')
+
+    def test_revive_job(self):
+        self.worker = MedicinesRegistryBridge(config)
+        self.worker.test = MagicMock()
+        self.worker.jobs = {'test': MagicMock(dead=MagicMock(return_value=True))}
+        self.worker.revive_job('test')
+        self.assertEqual(self.worker.jobs['test'].dead, False)
+
+
+
 
