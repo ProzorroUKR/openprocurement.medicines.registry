@@ -7,7 +7,6 @@ from logging import getLogger
 try:
     PKG = pkg_resources.get_distribution(__package__)
     LOGGER = getLogger(PKG.project_name)
-    LOGGER.info('################################################################')
     LOGGER.info(PKG.parsed_version)
     VERSION = '1.0'
 #    VERSION = '{}.{}'.format(
