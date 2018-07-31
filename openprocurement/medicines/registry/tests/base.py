@@ -49,33 +49,32 @@ def proxy_response():
     return response
 
 
-# class BaseWebTest(unittest.TestCase):
-#     initial_auth = None
-#     relative_to = os.path.dirname(__file__)
-#
-#     @classmethod
-#     def setUpClass(cls):
-#         import webtest
-#
-#         for _ in range(10):
-#             try:
-#                 cls.app = webtest.TestApp('config:tests.ini', relative_to=cls.relative_to)
-#             except:
-#                 pass
-#             else:
-#                 break
-#         else:
-#             cls.app = webtest.TestApp('config:tests.ini', relative_to=cls.relative_to)
-#
-#     @classmethod
-#     def tearDownClass(cls):
-#         pass
-#
-#     def setUp(self):
-#         self.app.authorization = self.initial_auth
-#
-#     def tearDown(self):
-#         pass
+class BaseWebTest(unittest.TestCase):
+    initial_auth = ('Basic', ('brokername', ''))
+    relative_to = os.path.dirname(__file__)
+
+    @classmethod
+    def setUpClass(cls):
+        import webtest
+
+        for _ in range(10):
+            try:
+                cls.app = webtest.TestApp('config:tests.ini', relative_to=cls.relative_to)
+            except:
+                pass
+            else:
+                break
+        else:
+            cls.app = webtest.TestApp('config:tests.ini', relative_to=cls.relative_to)
+    @classmethod
+    def tearDownClass(cls):
+        pass
+
+    def setUp(self):
+        self.app.authorization = self.initial_auth
+
+    def tearDown(self):
+        pass
 
 
 @tools.nottest
