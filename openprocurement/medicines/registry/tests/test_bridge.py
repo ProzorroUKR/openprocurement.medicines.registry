@@ -4,7 +4,6 @@ from restkit import RequestError
 from openprocurement.medicines.registry.tests.base import BaseServersTest, config
 from openprocurement.medicines.registry.databridge.bridge import MedicinesRegistryBridge
 from openprocurement.medicines.registry.client import ProxyClient
-from openprocurement.medicines.registry.tests.utils import AlmostAlwaysTrue
 
 
 class TestBridgeWorker(BaseServersTest):
@@ -33,20 +32,6 @@ class TestBridgeWorker(BaseServersTest):
 
         self.assertEqual(self.worker.jobs['registry'], 0)
         self.assertEqual(self.worker.jobs['json_former'], 1)
-
-    @patch('gevent.sleep')
-    def test_bridge_run(self, sleep):
-        self.worker = MedicinesRegistryBridge(config)
-        registry, json_former = [MagicMock() for _ in range(2)]
-
-        self.worker.registry = registry
-        self.worker.json_former = json_former
-
-        with patch('__builtin__.True', AlmostAlwaysTrue()):
-            self.worker.run()
-
-        self.assertEqual(self.worker.registry.call_count, 1)
-        self.assertEqual(self.worker.json_former.call_count, 1)
 
     def test_proxy_server_mock(self):
         self.worker = MedicinesRegistryBridge(config)

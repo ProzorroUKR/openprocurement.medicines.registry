@@ -31,7 +31,10 @@ class RegistryView(object):
         param = self.request.matchdict.get('param')
 
         if param in self.valid_params:
-            data = str_to_obj(self.db.get(param))
+            try:
+                data = str_to_obj(self.db.get(param))
+            except ValueError:
+                data = None
 
             if data:
                 response = Response(body=json.dumps(data), content_type='application/json', status=200)

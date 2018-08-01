@@ -8,7 +8,7 @@ from retrying import retry
 from requests import RequestException
 from ConfigParser import ConfigParser
 from openprocurement.medicines.registry.utils import (
-    journal_context,string_time_to_datetime, file_exists, create_file
+    journal_context, string_time_to_datetime, file_exists, create_file
 )
 from openprocurement.medicines.registry.journal_msg_ids import (
     BRIDGE_START,

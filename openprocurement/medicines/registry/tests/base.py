@@ -2,6 +2,7 @@
 import os
 import unittest
 import subprocess
+import webtest
 
 from time import sleep
 from nose import tools
@@ -10,6 +11,7 @@ from gevent.pywsgi import WSGIServer
 from redis import StrictRedis
 
 from openprocurement.medicines.registry import VERSION
+from openprocurement.medicines.registry.databridge.caching import DB
 
 
 config = {
@@ -49,33 +51,30 @@ def proxy_response():
     return response
 
 
-# class BaseWebTest(unittest.TestCase):
-#     initial_auth = None
-#     relative_to = os.path.dirname(__file__)
-#
-#     @classmethod
-#     def setUpClass(cls):
-#         import webtest
-#
-#         for _ in range(10):
-#             try:
-#                 cls.app = webtest.TestApp('config:tests.ini', relative_to=cls.relative_to)
-#             except:
-#                 pass
-#             else:
-#                 break
-#         else:
-#             cls.app = webtest.TestApp('config:tests.ini', relative_to=cls.relative_to)
-#
-#     @classmethod
-#     def tearDownClass(cls):
-#         pass
-#
-#     def setUp(self):
-#         self.app.authorization = self.initial_auth
-#
-#     def tearDown(self):
-#         pass
+class PrefixedRequestClass(webtest.app.TestRequest):
+    @classmethod
+    def blank(cls, path, *args, **kwargs):
+        prefix = '/api/{}'.format(VERSION)
+
+        if not path.startswith(prefix):
+            path = prefix + path
+
+        return webtest.app.TestRequest.blank(path, *args, **kwargs)
+
+
+class BaseWebTest(unittest.TestCase):
+    initial_auth = ('Basic', ('brokername', ''))
+    relative_to = os.path.dirname(__file__)
+
+    def setUp(self):
+        self.app = webtest.TestApp('config:tests.ini', relative_to=self.relative_to)
+        self.app.RequestClass = PrefixedRequestClass
+
+        self.db = DB(config)
+        self.valid_params = ['inn', 'atc', 'inn2atc', 'atc2inn']
+
+    def tearDown(self):
+        self.db.flushall()
 
 
 @tools.nottest
@@ -84,9 +83,7 @@ class BaseServersTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.api_server_bottle = Bottle()
         cls.proxy_server_bottle = Bottle()
-        cls.doc_server_bottle = Bottle()
         cls.proxy_server = WSGIServer(('127.0.0.1', 8008), cls.proxy_server_bottle, log=None)
         setup_routing(cls.proxy_server_bottle, proxy_response, path='/api/{}/health'.format(VERSION))
         cls.redis_process = subprocess.Popen(

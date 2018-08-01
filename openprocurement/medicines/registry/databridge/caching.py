@@ -50,6 +50,9 @@ class DB(object):
         for key in self.db.scan_iter(prefix):
             self.remove(key)
 
+    def flushall(self):
+        self.db.flushall()
+
     @property
     def backend(self):
         return self.__backend

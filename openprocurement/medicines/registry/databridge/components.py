@@ -210,7 +210,7 @@ class JsonFormer(BaseWorker):
                     'DONE. Local {}.json file updated.'.format(name),
                     extra=journal_context({'MESSAGE_ID': BRIDGE_FILE}, {})
                 )
-                self.__update_cache(name)
+                self._update_cache(name)
             else:
                 logger.info(
                     '{} values in remote registry not changed. Skipping update local {}.json file'.format(
@@ -226,7 +226,7 @@ class JsonFormer(BaseWorker):
                 'DONE. Local {}.json file updated.'.format(name),
                 extra=journal_context({'MESSAGE_ID': BRIDGE_FILE}, {})
             )
-            self.__update_cache(name)
+            self._update_cache(name)
 
     def update_json_files(self):
         inn_json = os.path.join(DATA_PATH, 'inn.json')
@@ -258,7 +258,7 @@ class JsonFormer(BaseWorker):
 
             gevent.sleep(self.json_files_delay)
 
-    def __update_cache(self, name):
+    def _update_cache(self, name):
         logger.info('Update cache for {}...'.format(name), extra=journal_context({'MESSAGE_ID': BRIDGE_INFO}, {}))
         file_path = os.path.join(DATA_PATH, '{}.json'.format(name))
 
@@ -285,7 +285,7 @@ class JsonFormer(BaseWorker):
 
             for _, name in self.eq_valid_names.items():
                 if not len(self.db.keys(name)) > 0:
-                    self.__update_cache(name)
+                    self._update_cache(name)
 
     def _start_jobs(self):
         logger.info('Starting jobs...')
