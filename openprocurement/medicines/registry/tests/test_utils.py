@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import subprocess
+import datetime
 
 from unittest import TestCase
 from pyramid import testing
@@ -10,6 +11,7 @@ from redis import StrictRedis
 from openprocurement.medicines.registry.api.utils import *
 from openprocurement.medicines.registry import BASE_DIR
 from openprocurement.medicines.registry.databridge.caching import DB
+from openprocurement.medicines.registry.utils import *
 
 
 cache_config = {
@@ -78,4 +80,50 @@ class TestUtils(TestCase):
     def test_request_params_exception(self):
         request = testing.DummyRequest().response
         self.assertRaises(Exception, lambda: request_params(request))
+
+    def test_file_exists(self):
+        file_path = BASE_DIR + '/test_file'
+        self.assertEqual(file_exists(file_path), False)
+        os.system('mkdir {}'.format(file_path))
+        self.assertEqual(file_exists(file_path), False)
+        os.system('rm -r {}'.format(file_path))
+        os.system('touch {}'.format(file_path))
+        self.assertEqual(file_exists(file_path), False)
+        os.system('rm {}'.format(file_path))
+
+#openprocurement/medicines/registry/utils.py                       77     45    42%   19, 26, 30-33, 37-38, 46-47, 57, 60, 63, 70-73, 77-82, 85-91, 94-119
+#openprocurement/medicines/registry/utils.py                       77     45    42%   19, 26, 30-33, 37-38, 46-47, 57, 60, 63, 70-73, 77-82, 85-91, 94-119
+
+
+    def test_file_is_empty(self):
+        file_path = BASE_DIR + '/test_file'
+        os.system('touch {}'.format(file_path))
+        self.assertEqual(file_is_empty(file_path), True)
+        test_file = open(file_path, 'w').write('some_data')
+        test_file.close()
+        self.assertEqual(file_is_empty(file_path), False)
+        os.system('rm {}'.format(file_path))
+
+    def test_get_file_last_modified(self):
+        file_path = BASE_DIR + '/test_file'
+        test_file = open(file_path, 'w')
+        test_file.close()
+        curr_time = datetime.datetime.now().replace(microsecond=0)
+        self.assertEqual(get_file_last_modified(file_path), curr_time)
+        self.assertNotEqual(get_file_last_modified(file_path), curr_time-datetime.timedelta(367647, 53971))
+        self.assertEqual(get_file_last_modified('/some/wrong/file/path'), None)
+
+    def test_string_time_to_datetime(self):
+        now = datetime.datetime.now().replace(microsecond=0)
+        now_time_str = '{}:{}:{}'.format(now.hour, now.minute, now.second)
+        self.assertEqual(string_time_to_datetime(now_time_str), now)
+        self.assertRaises(ValueError, string_time_to_datetime, time= '')
+        self.assertRaises(ValueError, string_time_to_datetime)
+
+    def test_journal_context(self):
+        expected_res =  {'JOURNAL_test_key': 'test_val'}
+        params = {'test_key': 'test_val'}
+        self.assertEqual(journal_context(params=params), expected_res)
+        self.assertEqual(journal_context(), {})
+        self.assertRaises(AttributeError, journal_context(params=1))
 
