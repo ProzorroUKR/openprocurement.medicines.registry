@@ -49,7 +49,13 @@ def get_file_last_modified(filepath):
 
 def string_time_to_datetime(time='hh:mm:ss'):
     dt_str = '{} {}'.format(get_now().date(), time)
-    return datetime.strptime(dt_str, '%Y-%m-%d %H:%M:%S')
+
+    try:
+        dt = datetime.strptime(dt_str, '%Y-%m-%d %H:%M:%S')
+    except ValueError:
+        dt = None
+
+    return dt
 
 
 def journal_context(record=None, params=None):
@@ -68,7 +74,11 @@ def journal_context(record=None, params=None):
 class XMLParser:
     def __init__(self, xml):
         parser = ElementTree.XMLParser(encoding='utf-8')
-        self.xml = ElementTree.fromstring(xml, parser)
+
+        try:
+            self.xml = ElementTree.fromstring(xml, parser)
+        except ElementTree.ParseError:
+            self.xml = None
 
         self.ROOT_ITEM = 'doc'
 
@@ -83,7 +93,11 @@ class XMLParser:
 
     def get_values(self, key, unique=True):
         get_value = partial(self.get_value, key)
-        values = map(get_value, self.xml.findall(self.ROOT_ITEM))
+
+        if self.xml is not None:
+            values = map(get_value, self.xml.findall(self.ROOT_ITEM))
+        else:
+            return list()
 
         if unique:
             return set(values)
@@ -93,28 +107,29 @@ class XMLParser:
     def inn2atc_atc2inn(self, root):
         _tmp = dict()
 
-        for i in self.xml:
-            inn = i.find('mnn').text or ''
-            atc_list = [i.find('atc1').text, i.find('atc2').text, i.find('atc3').text]
-            atc = set([i.decode('utf-8') for i in atc_list if i])
+        if self.xml is not None:
+            for i in self.xml:
+                inn = i.find('mnn').text or ''
+                atc_list = [i.find('atc1').text, i.find('atc2').text, i.find('atc3').text]
+                atc = set([i.decode('utf-8') for i in atc_list if i])
 
-            inn = inn.replace('*', '').decode('utf-8')
+                inn = inn.replace('*', '').decode('utf-8')
 
-            if root == 'inn':
-                if inn in _tmp:
-                    value = _tmp.get(inn) | atc
-                    _tmp[inn] = value
-                else:
-                    _tmp[inn] = atc
-            elif root == 'atc':
-                for _atc in atc:
-                    if _atc in _tmp:
-                        _atc = _atc
-                        value = _tmp.get(_atc) | {inn}
-                        _tmp[_atc] = value
+                if root == 'inn':
+                    if inn in _tmp:
+                        value = _tmp.get(inn) | atc
+                        _tmp[inn] = value
                     else:
-                        _tmp[_atc] = {inn}
-            else:
-                return dict()
+                        _tmp[inn] = atc
+                elif root == 'atc':
+                    for _atc in atc:
+                        if _atc in _tmp:
+                            _atc = _atc
+                            value = _tmp.get(_atc) | {inn}
+                            _tmp[_atc] = value
+                        else:
+                            _tmp[_atc] = {inn}
+                else:
+                    return dict()
         return {k: list(v) for k, v in _tmp.items()}
 

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import subprocess
+import datetime
 
 from unittest import TestCase
 from pyramid import testing
@@ -8,6 +9,7 @@ from time import sleep
 from redis import StrictRedis
 
 from openprocurement.medicines.registry.api.utils import *
+from openprocurement.medicines.registry.utils import string_time_to_datetime
 from openprocurement.medicines.registry import BASE_DIR
 from openprocurement.medicines.registry.databridge.caching import DB
 
@@ -78,4 +80,9 @@ class TestUtils(TestCase):
     def test_request_params_exception(self):
         request = testing.DummyRequest().response
         self.assertRaises(Exception, lambda: request_params(request))
+
+    def test_string_time_to_datetime(self):
+        self.assertEqual(string_time_to_datetime(''), None)
+        self.assertIsNotNone(string_time_to_datetime('00:00:00'))
+        self.assertEquals(type(string_time_to_datetime('00:00:00')), type(datetime.datetime.now()))
 

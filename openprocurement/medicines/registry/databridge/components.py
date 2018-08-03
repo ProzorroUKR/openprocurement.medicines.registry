@@ -30,7 +30,8 @@ class Registry(BaseWorker):
         self.start_time = get_now()
 
         self.INFINITY_LOOP = True
-        self.registry_xml = os.path.join(DATA_PATH, 'registry.xml')
+        self.DATA_PATH = DATA_PATH
+        self.registry_xml = os.path.join(self.DATA_PATH, 'registry.xml')
 
         self.source_registry = source_registry
         self.time_update_at = time_update_at
@@ -43,7 +44,7 @@ class Registry(BaseWorker):
             extra=journal_context({'MESSAGE_ID': BRIDGE_REGISTER}, {})
         )
 
-        with open(os.path.join(DATA_PATH, 'registry.xml'), 'w') as f:
+        with open(os.path.join(self.DATA_PATH, 'registry.xml'), 'w') as f:
             f.write(xml)
             logger.info(
                 'File \'registry.xml\' saved at: {}.'.format(get_now()),
@@ -52,9 +53,16 @@ class Registry(BaseWorker):
 
     def get_registry(self):
         logger.info('Get remote registry...', extra=journal_context({'MESSAGE_ID': BRIDGE_INFO}, {}))
-        response = urlopen(self.source_registry)
+        try:
+            response = urlopen(self.source_registry)
+        except ValueError:
+            logger.info(
+                'Error! Unknown url type: {}'.format(self.source_registry),
+                extra=journal_context({'MESSAGE_ID': BRIDGE_REGISTER}, {})
+            )
+            return
 
-        if response.code != 200:
+        if response and response.code != 200:
             logger.info(
                 'Error! Server response status: {}. Sending a second request...'.format(response.code),
                 extra=journal_context({'MESSAGE_ID': BRIDGE_REGISTER}, {})
@@ -66,23 +74,23 @@ class Registry(BaseWorker):
                 extra=journal_context({'MESSAGE_ID': BRIDGE_REGISTER}, {})
             )
 
-        response = response.readlines()
+        content = response.readlines()
 
         try:
-            response = ''.join(map(decode_cp1251, response)).encode('utf-8').strip()
+            content = ''.join(map(decode_cp1251, content)).encode('utf-8').strip()
         except UnicodeDecodeError as e:
             logger.info(e)
             return
 
-        self.save_registry(response)
+        self.save_registry(content)
 
-        return response
+        return content
 
     @property
     def registry_update_time(self):
         now = get_now()
 
-        if now.hour == self.time_update_at.hour:
+        if self.time_update_at and (now.hour == self.time_update_at.hour):
             check_to_time = self.time_update_at + timedelta(minutes=30)
 
             if self.time_update_at.minute <= now.minute and now.replace(tzinfo=None).time() <= check_to_time.time():
@@ -134,7 +142,8 @@ class JsonFormer(BaseWorker):
         self.start_time = get_now()
 
         self.INFINITY_LOOP = True
-        self.registry_xml = os.path.join(DATA_PATH, 'registry.xml')
+        self.DATA_PATH = DATA_PATH
+        self.registry_xml = os.path.join(self.DATA_PATH, 'registry.xml')
 
         self.db = db
         self.delay = delay
@@ -153,13 +162,18 @@ class JsonFormer(BaseWorker):
             'atc2inn': 'atc2inn'
         }
 
+        self.inn_json = os.path.join(self.DATA_PATH, 'inn.json')
+        self.atc_json = os.path.join(self.DATA_PATH, 'atc.json')
+        self.inn2atc_json = os.path.join(self.DATA_PATH, 'inn2atc.json')
+        self.atc2inn_json = os.path.join(self.DATA_PATH, 'atc2inn.json')
+
     def update_json(self, name):
         logger.info(
             'Update local {}.json file...'.format(self.eq_valid_names.get(name)),
             extra=journal_context({'MESSAGE_ID': BRIDGE_INFO}, {})
         )
 
-        file_path = os.path.join(DATA_PATH, '{}.json'.format(self.eq_valid_names.get(name)))
+        file_path = os.path.join(self.DATA_PATH, '{}.json'.format(self.eq_valid_names.get(name)))
 
         if file_is_empty(self.registry_xml):
             logger.info('Local {}.json file not updated. Registry file is empty.'.format(
@@ -229,11 +243,6 @@ class JsonFormer(BaseWorker):
             self._update_cache(name)
 
     def update_json_files(self):
-        inn_json = os.path.join(DATA_PATH, 'inn.json')
-        atc_json = os.path.join(DATA_PATH, 'atc.json')
-        inn2atc_json = os.path.join(DATA_PATH, 'inn2atc.json')
-        atc2inn_json = os.path.join(DATA_PATH, 'atc2inn.json')
-
         while True:
             now = get_now()
             registry_last_modified = get_file_last_modified(self.registry_xml)
@@ -243,8 +252,8 @@ class JsonFormer(BaseWorker):
                 'inn2atc': self.inn2atc_json_last_check, 'atc2inn': self.atc2inn_json_last_check
             }
             files_dict = {
-                'inn': inn_json, 'atc': atc_json,
-                'inn2atc': inn2atc_json, 'atc2inn': atc2inn_json
+                'inn': self.inn_json, 'atc': self.atc_json,
+                'inn2atc': self.inn2atc_json, 'atc2inn': self.atc2inn_json
             }
 
             for name, eq_name in self.eq_valid_names.items():
@@ -260,7 +269,7 @@ class JsonFormer(BaseWorker):
 
     def _update_cache(self, name):
         logger.info('Update cache for {}...'.format(name), extra=journal_context({'MESSAGE_ID': BRIDGE_INFO}, {}))
-        file_path = os.path.join(DATA_PATH, '{}.json'.format(name))
+        file_path = os.path.join(self.DATA_PATH, '{}.json'.format(name))
 
         with open(file_path, 'r') as f:
             if not file_is_empty(file_path):

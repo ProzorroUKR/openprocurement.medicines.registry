@@ -64,7 +64,3 @@ class TestBridgeWorker(BaseServersTest):
         self.worker.jobs = {'test': MagicMock(dead=MagicMock(return_value=True))}
         self.worker.revive_job('test')
         self.assertEqual(self.worker.jobs['test'].dead, False)
-
-
-
-
