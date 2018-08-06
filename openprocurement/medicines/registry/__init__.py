@@ -7,9 +7,10 @@ from logging import getLogger
 try:
     PKG = pkg_resources.get_distribution(__package__)
     logger = getLogger(PKG.project_name)
-    VERSION = '{}.{}'.format(
-        int(PKG.parsed_version[0]), int(PKG.parsed_version[1]) if PKG.parsed_version[1].isdigit() else 0
-    )
+    VERSION = '1.0'
+#    VERSION = '{}.{}'.format(
+#        int(PKG.parsed_version[0]), int(PKG.parsed_version[1]) if PKG.parsed_version[1].isdigit() else 0
+#    )
 except pkg_resources.DistributionNotFound:
     logger = getLogger('openprocurement.medicines.registry')
     VERSION = '0.0'
