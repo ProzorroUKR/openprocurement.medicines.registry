@@ -12,6 +12,7 @@ from redis import StrictRedis
 
 from openprocurement.medicines.registry import VERSION
 from openprocurement.medicines.registry.databridge.caching import DB
+from openprocurement.medicines.registry.tests.utils import rm_dir
 
 
 config = {
@@ -80,6 +81,7 @@ class BaseWebTest(unittest.TestCase):
 @tools.nottest
 class BaseServersTest(unittest.TestCase):
     relative_to = os.path.dirname(__file__)
+    BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 
     @classmethod
     def setUpClass(cls):
@@ -93,6 +95,15 @@ class BaseServersTest(unittest.TestCase):
         cls.redis = StrictRedis(port=str(config.get('cache_port')))
         cls.proxy_server.start()
 
+    def setUp(self):
+        self.db = DB(config)
+        self.DATA_PATH = os.path.join(self.BASE_DIR, 'temp')
+        if not os.path.exists(self.DATA_PATH):
+            os.makedirs(self.DATA_PATH)
+
+        with open(os.path.join(self.DATA_PATH, 'registry.xml'), 'w'):
+            pass
+
     @classmethod
     def tearDownClass(cls):
         cls.proxy_server.close()
@@ -103,4 +114,6 @@ class BaseServersTest(unittest.TestCase):
     def tearDown(self):
         del self.worker
         self.redis.flushall()
+        self.DATA_PATH = os.path.join(self.BASE_DIR, 'temp')
+        rm_dir(self.DATA_PATH)
 

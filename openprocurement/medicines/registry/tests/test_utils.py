@@ -165,4 +165,3 @@ class TestUtils(TestCase):
         self.assertEqual(xml.inn2atc_atc2inn('atc'), {})
         with self.assertRaises(TypeError):
             xml.inn2atc_atc2inn()
-

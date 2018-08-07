@@ -1,5 +1,5 @@
 from mock import patch, MagicMock
-#from restkit import RequestError
+from restkit import RequestError
 
 from openprocurement.medicines.registry.tests.base import BaseServersTest, config
 from openprocurement.medicines.registry.databridge.bridge import MedicinesRegistryBridge
@@ -33,14 +33,14 @@ class TestBridgeWorker(BaseServersTest):
         self.assertEqual(self.worker.jobs['registry'], 0)
         self.assertEqual(self.worker.jobs['json_former'], 1)
 
-#    def test_proxy_server_mock(self):
-#       self.worker = MedicinesRegistryBridge(config)
-#       self.worker.proxy_client = MagicMock(health=MagicMock(side_effect=RequestError()))
-#        with self.assertRaises(RequestError):
-#            self.worker.check_proxy()
+    def test_proxy_server_mock(self):
+        self.worker = MedicinesRegistryBridge(config)
+        self.worker.proxy_client = MagicMock(health=MagicMock(side_effect=RequestError()))
+        with self.assertRaises(RequestError):
+            self.worker.check_proxy()
 
-#        self.worker.proxy_client = MagicMock(return_value=True)
-#        self.assertTrue(self.worker.check_proxy())
+        self.worker.proxy_client = MagicMock(return_value=True)
+        self.assertTrue(self.worker.check_proxy())
 
     @patch('gevent.sleep')
     def test_launch(self, gevent_sleep):
@@ -63,7 +63,3 @@ class TestBridgeWorker(BaseServersTest):
         self.worker.jobs = {'test': MagicMock(dead=MagicMock(return_value=True))}
         self.worker.revive_job('test')
         self.assertEqual(self.worker.jobs['test'].dead, False)
-
-
-
-
