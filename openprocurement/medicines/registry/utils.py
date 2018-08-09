@@ -97,9 +97,7 @@ class XMLParser:
             inn = i.find('mnn').text or ''
             atc_list = [i.find('atc1').text, i.find('atc2').text, i.find('atc3').text]
             atc = set([i.decode('utf-8') for i in atc_list if i])
-
             inn = inn.replace('*', '').decode('utf-8')
-
             if root == 'inn':
                 if inn in _tmp:
                     value = _tmp.get(inn) | atc
