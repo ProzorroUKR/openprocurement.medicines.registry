@@ -46,7 +46,7 @@ class MedicinesRegistryBridge(object):
 
         self.INFINITY_LOOP = True
 
-        self.time_update_at = string_time_to_datetime(self.config_get('time_update_at') or '05:00:00')
+        self.time_update_at = string_time_to_datetime(self.config_get('time_update_at') or '05:30:00')
         self.delay = int(self.config_get('delay')) or 60
         self.registry_delay = int(self.config_get('registry_delay')) or 60
         self.json_files_delay = int(self.config_get('json_files_delay')) or 10

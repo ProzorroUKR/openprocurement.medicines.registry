@@ -96,6 +96,20 @@ class TestRegistry(BaseServersTest):
         )
         self.worker._start_jobs()
 
+    def test_check_and_revive_jobs(self):
+        self.worker = Registry(
+            config.get('source_registry'), config.get('time_update_at'), config.get('delay'),
+            config.get('registry_delay'), config.get('services_not_available')
+        )
+        self.worker.jobs = {'test': MagicMock(dead=MagicMock(return_value=True))}
+        self.worker.revive_job = MagicMock()
+
+        with self.assertRaises(AttributeError):
+            self.worker.check_and_revive_jobs()
+
+        with self.assertRaises(AssertionError):
+            self.worker.revive_job.assert_called_once_with('test')
+
 
 class TestJsonFormer(BaseServersTest):
     __test__ = True
@@ -215,6 +229,20 @@ class TestJsonFormer(BaseServersTest):
             config.get('cache_monitoring_delay'), config.get('services_not_available')
         )
         self.worker._start_jobs()
+
+    def test_check_and_revive_jobs(self):
+        self.worker = JsonFormer(
+            self.db, config.get('delay'), config.get('json_files_delay'),
+            config.get('cache_monitoring_delay'), config.get('services_not_available')
+        )
+        self.worker.jobs = {'test': MagicMock(dead=MagicMock(return_value=True))}
+        self.worker.revive_job = MagicMock()
+
+        with self.assertRaises(AttributeError):
+            self.worker.check_and_revive_jobs()
+
+        with self.assertRaises(AssertionError):
+            self.worker.revive_job.assert_called_once_with('test')
 
 
 

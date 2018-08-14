@@ -14,7 +14,7 @@ from openprocurement.medicines.registry.journal_msg_ids import (
     BRIDGE_CACHE
 )
 from openprocurement.medicines.registry.utils import (
-    journal_context, decode_cp1251, get_now, get_file_last_modified, file_is_empty, XMLParser
+    journal_context, decode_cp1251, get_now, get_file_last_modified, file_is_empty, XMLParser, string_time_to_datetime
 )
 from openprocurement.medicines.registry import DATA_PATH
 from openprocurement.medicines.registry.databridge.base_worker import BaseWorker
@@ -34,7 +34,12 @@ class Registry(BaseWorker):
         self.registry_xml = os.path.join(self.DATA_PATH, 'registry.xml')
 
         self.source_registry = source_registry
-        self.time_update_at = time_update_at
+
+        if type(time_update_at).__name__ == 'str':
+            self.time_update_at = string_time_to_datetime(time_update_at or '05:30:00')
+        else:
+            self.time_update_at = time_update_at
+
         self.delay = delay
         self.registry_delay = registry_delay
 

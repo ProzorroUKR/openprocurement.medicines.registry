@@ -16,7 +16,7 @@ from openprocurement.medicines.registry.tests.utils import rm_dir
 
 
 config = {
-    'proxy_server': 'http://127.0.0.1',
+    'proxy_host': '127.0.0.1',
     'proxy_port': 8008,
     'proxy_version': 1.0,
     'cache_db_name': 0,
