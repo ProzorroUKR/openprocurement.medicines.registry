@@ -195,7 +195,7 @@ class TestJsonFormer(BaseServersTest):
         self.assertFalse(file_is_empty(self.worker.inn_json))
 
         self.worker.update_json('atc1')
-        self.assertTrue(file_is_empty(self.worker.atc_json))
+        self.assertFalse(file_is_empty(self.worker.atc_json))
 
         self.worker.update_json('inn2atc')
         self.assertFalse(file_is_empty(self.worker.inn2atc_json))
@@ -205,16 +205,26 @@ class TestJsonFormer(BaseServersTest):
 
         # check cache
         cache = self.db.get('inn')
-        self.assertEqual(str_to_obj(cache), {u'methyluracil': u'Methyluracil'})
+        self.assertEqual(str_to_obj(cache).get('data'), {u'methyluracil': u'Methyluracil'})
 
         cache = self.db.get('atc')
-        self.assertEqual(cache, None)
+        self.assertEqual(str_to_obj(cache).get('data'), {})
 
         cache = self.db.get('inn2atc')
-        self.assertEqual(str_to_obj(cache), {u'methyluracil': []})
+        self.assertIn(u'methyluracil', str_to_obj(cache).get('data'))
 
-        cache = self.db.get('atc2inn')
-        self.assertEqual(cache, '{}')
+        if file_is_empty(self.worker.atc2inn_json):
+            cache = self.db.get('atc2inn')
+            self.assertEqual(str_to_obj(cache).get('data'), {})
+        else:
+            cache = self.db.get('atc2inn')
+            with open(self.worker.atc2inn_json) as f:
+                data = f.read()
+
+            if str_to_obj(data).get('data'):
+                self.assertEqual(str_to_obj(data).get('data'), str_to_obj(cache).get('data'))
+            else:
+                self.assertEqual(str_to_obj(data).get('data'), dict())
 
         self.db.flushall()
         self.assertEqual(self.db.has('inn'), False)

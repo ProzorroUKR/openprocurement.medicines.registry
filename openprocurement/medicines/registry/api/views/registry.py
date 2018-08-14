@@ -6,7 +6,8 @@ from pyramid.view import view_defaults, view_config
 from pyramid.response import FileResponse, Response
 from openprocurement.medicines.registry.databridge.caching import DB
 from openprocurement.medicines.registry import BASE_DIR
-from openprocurement.medicines.registry.utils import str_to_obj
+from openprocurement.medicines.registry.utils import str_to_obj, journal_context
+from openprocurement.medicines.registry.journal_msg_ids import API_INFO
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,7 @@ class RegistryView(object):
                 data = str_to_obj(self.db.get(param))
             except ValueError:
                 data = None
+                logger.warn('Cache is empty!', extra=journal_context({'MESSAGE_ID': API_INFO}, {}))
 
             if data:
                 response = Response(body=json.dumps(data), content_type='application/json', status=200)

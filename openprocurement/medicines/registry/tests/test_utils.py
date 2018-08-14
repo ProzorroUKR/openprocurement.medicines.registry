@@ -148,8 +148,8 @@ class TestUtils(TestCase):
             pass
 
         curr_time = datetime.datetime.now().replace(microsecond=0)
-        self.assertEqual(get_file_last_modified(file_path), curr_time)
-        self.assertNotEqual(get_file_last_modified(file_path), curr_time - datetime.timedelta(367647, 53971))
+        self.assertEqual(get_file_last_modified(file_path).date(), curr_time.date())
+        self.assertNotEqual(get_file_last_modified(file_path), curr_time.date() - datetime.timedelta(days=1))
         self.assertEqual(get_file_last_modified('/some/wrong/file/path'), None)
 
     def test_str_to_obj(self):

@@ -194,8 +194,7 @@ class JsonFormer(BaseWorker):
             values = {v.decode('utf-8').lower(): v.decode('utf-8') for v in xml_parser.get_values(name) if v}
             self.inn_json_last_check = get_now()
         elif name == 'atc1':
-            values = xml_parser.inn2atc_atc2inn(root='atc')
-            values = {k: v[0] if v else '' for k, v in values.items()}
+            values = {v.decode('utf-8'): v.decode('utf-8') for v in xml_parser.get_values(name) if v}
             self.atc_json_last_check = get_now()
         elif name == 'inn2atc':
             values = xml_parser.inn2atc_atc2inn(root='inn')
@@ -216,14 +215,23 @@ class JsonFormer(BaseWorker):
 
         with open(file_path, 'r') as f:
             if file_is_empty(file_path):
-                data = list()
+                data = dict()
             else:
                 data = json.loads(f.read())
 
-        if set(values) == set(data):
+        if 'data' in data and set(values.keys()) == set(data.get('data').keys()):
             if name in ['inn2atc', 'atc2inn']:
+                last_modified = lambda key: {
+                    'inn2atc': get_file_last_modified(self.inn_json),
+                    'atc2inn': get_file_last_modified(self.atc_json)
+                }.get(key)
+
+                data = dict(
+                    data=values,
+                    dateModified=str(last_modified(name))
+                )
                 with open(file_path, 'w') as f:
-                    f.write(json.dumps(values))
+                    f.write(json.dumps(data))
 
                 logger.info(
                     'DONE. Local {}.json file updated.'.format(name),
@@ -239,7 +247,11 @@ class JsonFormer(BaseWorker):
                 )
         else:
             with open(file_path, 'w') as f:
-                f.write(json.dumps(values))
+                data = dict(
+                    data=values,
+                    dateModified=str(get_file_last_modified(self.registry_xml))
+                )
+                f.write(json.dumps(data))
 
             logger.info(
                 'DONE. Local {}.json file updated.'.format(name),
@@ -261,12 +273,15 @@ class JsonFormer(BaseWorker):
                 'inn2atc': self.inn2atc_json, 'atc2inn': self.atc2inn_json
             }
 
-            for name, eq_name in self.eq_valid_names.items():
+            eq_valid_names = (('mnn', 'inn'), ('atc1', 'atc'), ('inn2atc', 'inn2atc'), ('atc2inn', 'atc2inn'))
+
+            for name, eq_name in eq_valid_names:
                 if file_is_empty(files_dict.get(eq_name)):
                     self.update_json(name)
                 else:
                     if now.date() >= registry_last_modified.date():
                         last_check = last_check_dict.get(eq_name)
+
                         if not last_check or registry_last_modified.date() > last_check.date():
                             self.update_json(name)
 

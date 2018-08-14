@@ -44,7 +44,7 @@ def str_to_obj(string):
 
 def get_file_last_modified(filepath):
     if os.path.exists(filepath) and os.path.isfile(filepath):
-        return datetime.fromtimestamp(os.path.getmtime(filepath)).replace(microsecond=0)
+        return datetime.fromtimestamp(os.path.getmtime(filepath), TZ).replace(microsecond=0)
 
 
 def string_time_to_datetime(time='hh:mm:ss'):
@@ -107,6 +107,7 @@ class XMLParser:
     def inn2atc_atc2inn(self, root):
         _tmp = dict()
 
+# <<<<<<< HEAD
         if self.xml is not None:
             for i in self.xml:
                 inn = i.find('mnn').text or ''
@@ -119,12 +120,31 @@ class XMLParser:
                     if inn in _tmp:
                         value = _tmp.get(inn) | atc
                         _tmp[inn] = value
+# =======
+#         for i in self.xml:
+#             inn = i.find('mnn').text or ''
+#             atc_list = [i.find('atc1').text, i.find('atc2').text, i.find('atc3').text]
+#             atc = set([i.decode('utf-8') for i in atc_list if i])
+#             inn = inn.replace('*', '').decode('utf-8')
+#             if root == 'inn':
+#                 if inn in _tmp:
+#                     value = _tmp.get(inn) | atc
+#                     _tmp[inn] = value
+#                 else:
+#                     _tmp[inn] = atc
+#             elif root == 'atc':
+#                 for _atc in atc:
+#                     if _atc in _tmp:
+#                         _atc = _atc
+#                         value = _tmp.get(_atc) | {inn}
+#                         _tmp[_atc] = value
+# >>>>>>> e2105afbaaa6c5fadf70e1a62b46c54b6d6e9fe1
                     else:
                         _tmp[inn] = atc
                 elif root == 'atc':
                     for _atc in atc:
                         if _atc in _tmp:
-                            _atc = _atc
+                            # _atc = _atc
                             value = _tmp.get(_atc) | {inn}
                             _tmp[_atc] = value
                         else:

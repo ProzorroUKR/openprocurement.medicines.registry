@@ -74,7 +74,7 @@ class TestApi(BaseWebTest):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content_type, 'application/json')
         data = response.json
-        self.assertTrue(any([True for i in INITIAL_ATC_KEYS_DATA if i in data]))
+        self.assertTrue(any([True for i in INITIAL_ATC_KEYS_DATA if i in data.get('data')]))
         self.assertFalse(self.db.get('atc'))
 
         # get ATC data with cache
@@ -94,7 +94,7 @@ class TestApi(BaseWebTest):
         self.assertEqual(response.content_type, 'application/json')
         data = response.json
         self.assertTrue(self.db.get('atc'))
-        self.assertTrue(any([True for i in INITIAL_ATC_KEYS_DATA if i in data]))
+        self.assertTrue(any([True for i in INITIAL_ATC_KEYS_DATA if i in data.get('data')]))
         self.assertEqual(data, str_to_obj(self.db.get('atc')))
 
         # get INN data without cache
@@ -102,7 +102,7 @@ class TestApi(BaseWebTest):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content_type, 'application/json')
         data = response.json
-        self.assertTrue(any([True for i in INITIAL_INN_KEYS_DATA if i in data]))
+        self.assertTrue(any([True for i in INITIAL_INN_KEYS_DATA if i in data.get('data')]))
         self.assertFalse(self.db.get('inn'))
 
         # get INN data with cache
@@ -113,7 +113,7 @@ class TestApi(BaseWebTest):
         self.assertEqual(response.content_type, 'application/json')
         data = response.json
         self.assertTrue(self.db.get('inn'))
-        self.assertTrue(any([True for i in INITIAL_INN_KEYS_DATA if i in data]))
+        self.assertTrue(any([True for i in INITIAL_INN_KEYS_DATA if i in data.get('data')]))
         self.assertEqual(data, str_to_obj(self.db.get('inn')))
 
         # get INN2ATC data without cache
@@ -121,7 +121,7 @@ class TestApi(BaseWebTest):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content_type, 'application/json')
         data = response.json
-        self.assertTrue(any([True for i in INITIAL_INN_KEYS_DATA if i in data]))
+        self.assertTrue(any([True for i in INITIAL_INN_KEYS_DATA if i in data.get('data')]))
         self.assertFalse(self.db.get('inn2atc'))
 
         # get INN2ATC data with cache
@@ -132,7 +132,7 @@ class TestApi(BaseWebTest):
         self.assertEqual(response.content_type, 'application/json')
         data = response.json
         self.assertTrue(self.db.get('inn2atc'))
-        self.assertTrue(any([True for i in INITIAL_INN_KEYS_DATA if i in data]))
+        self.assertTrue(any([True for i in INITIAL_INN_KEYS_DATA if i in data.get('data')]))
         self.assertEqual(data, str_to_obj(self.db.get('inn2atc')))
 
         # get ATC2INN data without cache
@@ -140,7 +140,7 @@ class TestApi(BaseWebTest):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content_type, 'application/json')
         data = response.json
-        self.assertTrue(any([True for i in INITIAL_ATC_KEYS_DATA if i in data]))
+        self.assertTrue(any([True for i in INITIAL_ATC_KEYS_DATA if i in data.get('data')]))
         self.assertFalse(self.db.get('atc2inn'))
 
         # get ATC2INN data with cache
@@ -151,7 +151,7 @@ class TestApi(BaseWebTest):
         self.assertEqual(response.content_type, 'application/json')
         data = response.json
         self.assertTrue(self.db.get('atc2inn'))
-        self.assertTrue(any([True for i in INITIAL_ATC_KEYS_DATA if i in data]))
+        self.assertTrue(any([True for i in INITIAL_ATC_KEYS_DATA if i in data.get('data')]))
         self.assertEqual(data, str_to_obj(self.db.get('atc2inn')))
 
     def test_registry_invalid_api_version(self):
