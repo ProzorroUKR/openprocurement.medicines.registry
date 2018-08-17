@@ -1,0 +1,37 @@
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Medicines registry 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2018-08-16 16:08+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../source/index.rst:2
+msgid "Welcome to openprocurement.medicines.registry's documentation!"
+msgstr "Ласкаво просимо до документації по openprocurement.medicines.registry"
+
+#: ../../source/index.rst:6
+msgid "Contents:"
+msgstr "Зміст"
+
+#: ../../source/index.rst:16
+msgid "Indices and tables"
+msgstr "Індекси та таблиці"
+
+#: ../../source/index.rst:18
+msgid ":ref:`genindex`"
+msgstr ""
+
+#: ../../source/index.rst:19
+msgid ":ref:`modindex`"
+msgstr ""
+
+#: ../../source/index.rst:20
+msgid ":ref:`search`"
+msgstr ""
+
