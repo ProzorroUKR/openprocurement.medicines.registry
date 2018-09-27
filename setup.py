@@ -9,6 +9,7 @@ requires = [
     'retrying',
     'pytz',
     'redis',
+    'redis-py-cluster',
     'pyramid',
     'request_id_middleware',
     'server_cookie_middleware'

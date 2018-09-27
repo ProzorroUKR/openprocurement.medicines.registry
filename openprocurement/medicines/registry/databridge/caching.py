@@ -2,6 +2,8 @@ import logging
 import redis
 from ConfigParser import ConfigParser
 
+from rediscluster import StrictRedisCluster
+
 
 logger = logging.getLogger(__name__)
 
@@ -9,13 +11,35 @@ logger = logging.getLogger(__name__)
 class DB(object):
     def __init__(self, config):
         self.config = config
+        cache_backend = self.config_get('cache_backend') or 'redis'
 
-        self.__backend = 'redis'
-        self.__host = self.config_get('cache_host') or '127.0.0.1'
-        self.__port = self.config_get('cache_port') or 6379
-        self.__db_name = self.config_get('cache_db_name') or 0
+        if cache_backend == 'redis':
+            self.__backend = cache_backend
+            self.__host = self.config_get('cache_host') or '127.0.0.1'
+            self.__port = self.config_get('cache_port') or 6379
+            self.__db_name = self.config_get('cache_db_name') or 0
 
-        self.db = redis.StrictRedis(host=self.__host, port=self.__port, db=self.__db_name)
+            self.db = redis.StrictRedis(host=self.__host, port=self.__port, db=self.__db_name)
+        elif cache_backend == 'redis-cluster':
+            self.__backend = cache_backend
+            node1_host = self.config_get('node1_host')
+            node1_port = self.config_get('node1_port')
+            node2_host = self.config_get('node2_host')
+            node2_port = self.config_get('node2_port')
+            node3_host = self.config_get('node3_host')
+            node3_port = self.config_get('node3_port')
+
+            self.__host = (node1_host, node2_host, node3_host)
+            self.__port = (node1_port, node2_port, node3_port)
+            self.__db_name = 'cluster'
+
+            cluster_nodes = [
+                {'host': node1_host, 'port': node1_port},
+                {'host': node2_host, 'port': node2_port},
+                {'host': node3_host, 'port': node3_port}
+            ]
+
+            self.db = StrictRedisCluster(startup_nodes=cluster_nodes, decode_responses=True)
 
         self.set_value = self.db.set
         self.has_value = self.db.exists
