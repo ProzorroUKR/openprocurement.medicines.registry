@@ -22,6 +22,20 @@ class RegistryView(object):
             'cache_host': self.request.registry.settings.get('cache_host'),
             'cache_port': self.request.registry.settings.get('cache_port'),
             'cache_db_name': self.request.registry.settings.get('cache_db_name'),
+            'cache_backend': self.request.registry.settings.get('cache_backend'),
+
+            'node1_host': self.request.registry.settings.get('node1_host'),
+            'node1_port': self.request.registry.settings.get('node1_port'),
+            'node2_host': self.request.registry.settings.get('node2_host'),
+            'node2_port': self.request.registry.settings.get('node2_port'),
+            'node3_host': self.request.registry.settings.get('node3_host'),
+            'node3_port': self.request.registry.settings.get('node3_port'),
+            'node4_host': self.request.registry.settings.get('node4_host'),
+            'node4_port': self.request.registry.settings.get('node4_port'),
+            'node5_host': self.request.registry.settings.get('node5_host'),
+            'node5_port': self.request.registry.settings.get('node5_port'),
+            'node6_host': self.request.registry.settings.get('node6_host'),
+            'node6_port': self.request.registry.settings.get('node6_port')
         }}
         self.db = DB(db_config)
 

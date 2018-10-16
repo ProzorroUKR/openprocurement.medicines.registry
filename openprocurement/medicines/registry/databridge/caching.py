@@ -29,14 +29,24 @@ class DB(object):
             node3_host = self.config_get('node3_host')
             node3_port = self.config_get('node3_port')
 
-            self.__host = (node1_host, node2_host, node3_host)
-            self.__port = (node1_port, node2_port, node3_port)
+            node4_host = self.config_get('node4_host')
+            node4_port = self.config_get('node4_port')
+            node5_host = self.config_get('node5_host')
+            node5_port = self.config_get('node5_port')
+            node6_host = self.config_get('node6_host')
+            node6_port = self.config_get('node6_port')
+
+            self.__host = (node1_host, node2_host, node3_host, node4_host, node5_host, node6_host)
+            self.__port = (node1_port, node2_port, node3_port, node4_port, node5_port, node6_port)
             self.__db_name = 'cluster'
 
             cluster_nodes = [
                 {'host': node1_host, 'port': node1_port},
                 {'host': node2_host, 'port': node2_port},
-                {'host': node3_host, 'port': node3_port}
+                {'host': node3_host, 'port': node3_port},
+                {'host': node4_host, 'port': node4_port},
+                {'host': node5_host, 'port': node5_port},
+                {'host': node6_host, 'port': node6_port}
             ]
 
             self.db = StrictRedisCluster(startup_nodes=cluster_nodes, decode_responses=True)
@@ -49,7 +59,7 @@ class DB(object):
         if isinstance(self.config, ConfigParser):
             return self.config.get('app:api', name)
         else:
-            return self.config.get(name)
+            return self.config.get('app:api').get(name)
 
     def get(self, key):
         return self.db.get(key)
