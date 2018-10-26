@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class Registry(BaseWorker):
-    def __init__(self, source_registry, source_registry_proxy, time_update_at, delay, registry_delay, services_not_available):
+    def __init__(self, source_registry, time_update_at, delay, registry_delay, services_not_available, source_registry_proxy=None):
         super(Registry, self).__init__(services_not_available)
         self.start_time = get_now()
 
