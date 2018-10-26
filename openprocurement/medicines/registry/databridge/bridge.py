@@ -56,7 +56,7 @@ class MedicinesRegistryBridge(object):
         self.source_registry = self.config_get('source_registry')
         try:
             self.source_registry_proxy = self.config_get('source_registry_proxy')
-        except NoOptionError:
+        except (NoOptionError, KeyError):
             self.source_registry_proxy = None
 
         self._files_init()
