@@ -2,7 +2,7 @@ import os
 import logging.config
 import gevent
 import json
-from urllib2 import urlopen
+from urllib2 import urlopen, ProxyHandler, build_opener
 
 from datetime import timedelta
 from gevent import spawn, monkey
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class Registry(BaseWorker):
-    def __init__(self, source_registry, time_update_at, delay, registry_delay, services_not_available):
+    def __init__(self, source_registry, time_update_at, delay, registry_delay, services_not_available, source_registry_proxy=None):
         super(Registry, self).__init__(services_not_available)
         self.start_time = get_now()
 
@@ -34,6 +34,7 @@ class Registry(BaseWorker):
         self.registry_xml = os.path.join(self.DATA_PATH, 'registry.xml')
 
         self.source_registry = source_registry
+        self.source_registry_proxy = source_registry_proxy
 
         if type(time_update_at).__name__ == 'str':
             self.time_update_at = string_time_to_datetime(time_update_at or '05:30:00')
@@ -42,6 +43,12 @@ class Registry(BaseWorker):
 
         self.delay = delay
         self.registry_delay = registry_delay
+
+        if source_registry_proxy:
+            proxy = ProxyHandler({'http': source_registry_proxy, 'https': source_registry_proxy})
+            self.urlopen = build_opener(proxy).open
+        else:
+            self.urlopen = urlopen
 
     def save_registry(self, xml):
         logger.info(
@@ -59,7 +66,7 @@ class Registry(BaseWorker):
     def get_registry(self):
         logger.info('Get remote registry...', extra=journal_context({'MESSAGE_ID': BRIDGE_INFO}, {}))
         try:
-            response = urlopen(self.source_registry)
+            response = self.urlopen(self.source_registry)
         except ValueError:
             logger.info(
                 'Error! Unknown url type: {}'.format(self.source_registry),
