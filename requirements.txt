@@ -4,8 +4,8 @@ pyramid==1.9.2
 gevent==1.0.2
 tornado==4.5.2
 pyzmq==16.0.2
-requests==2.18.4
-coverage==3.7.1
+requests==2.20.0
+coverage==4.0.3
 mock==1.0.1
 urllib3==1.22
 zc.buildout==2.12.1
