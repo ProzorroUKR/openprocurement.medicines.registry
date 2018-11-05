@@ -6,7 +6,7 @@ from functools import partial
 from gevent import monkey, event
 from retrying import retry
 from requests import RequestException
-from ConfigParser import ConfigParser
+from ConfigParser import ConfigParser, NoOptionError
 from openprocurement.medicines.registry.utils import (
     journal_context, string_time_to_datetime, file_exists, create_file
 )
@@ -54,6 +54,10 @@ class MedicinesRegistryBridge(object):
         self.cache_monitoring_delay = int(self.config_get('cache_monitoring_delay')) or 10
 
         self.source_registry = self.config_get('source_registry')
+        try:
+            self.source_registry_proxy = self.config_get('source_registry_proxy')
+        except (NoOptionError, KeyError):
+            self.source_registry_proxy = None
 
         self._files_init()
 
@@ -69,6 +73,7 @@ class MedicinesRegistryBridge(object):
         self.registry = partial(
             Registry.spawn,
             source_registry=self.source_registry,
+            source_registry_proxy=self.source_registry_proxy,
             time_update_at=self.time_update_at,
             delay=self.delay,
             registry_delay=self.registry_delay,
