@@ -10,3 +10,4 @@ mock==1.0.1
 urllib3==1.22
 zc.buildout==2.12.1
 pep8==1.7.1
+redis-py-cluster==1.2.0
