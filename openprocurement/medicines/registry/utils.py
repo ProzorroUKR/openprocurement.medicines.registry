@@ -1,12 +1,13 @@
 import os
 import ast
+import logging
 from pytz import timezone
 from datetime import datetime
 from functools import partial
 
 from xml.etree import ElementTree
 
-
+logger = logging.getLogger(__name__)
 SANDBOX_MODE = True if os.environ.get('SANDBOX_MODE', 'False').lower() == 'true' else False
 TZ = timezone(os.environ['TZ'] if 'TZ' in os.environ else 'Europe/Kiev')
 
@@ -77,10 +78,15 @@ class XMLParser:
 
         try:
             self.xml = ElementTree.fromstring(xml, parser)
-        except ElementTree.ParseError:
+        except ElementTree.ParseError as e:
+            logger.exception(e)
             self.xml = None
 
         self.ROOT_ITEM = 'doc'
+
+    @property
+    def document_valid(self):
+        return self.xml is not None
 
     @staticmethod
     def get_value(key, item):

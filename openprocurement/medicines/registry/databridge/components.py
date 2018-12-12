@@ -94,9 +94,9 @@ class Registry(BaseWorker):
             logger.info(e)
             return
 
-        self.save_registry(content)
-
-        return content
+        if XMLParser(content).document_valid:
+            self.save_registry(content)
+            return content
 
     @property
     def registry_update_time(self):
