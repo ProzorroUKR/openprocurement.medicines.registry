@@ -7,7 +7,7 @@ pyzmq==16.0.2
 requests==2.20.0
 coverage==4.0.3
 mock==1.0.1
-urllib3==1.22
+urllib3==1.24.2
 zc.buildout==2.12.1
 pep8==1.7.1
 redis-py-cluster==1.2.0
